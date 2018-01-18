@@ -1,0 +1,3 @@
+hockey_app_id: 123
+app_folder: "app"
+builds_path: "build/outputs/apk/"
