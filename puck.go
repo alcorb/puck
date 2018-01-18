@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/ashwanthkumar/slack-go-webhook"
 
 	"github.com/dghubble/sling"
 	upload "github.com/jawher/sling.upload"
@@ -12,14 +13,18 @@ import (
 )
 
 type Config struct {
-	HockeyAppId string `yaml:"hockey_app_id"`
-	AppFolder   string `yaml:"app_folder"`
-	BuildsPath  string `yaml:"builds_path"`
+	HockeyAppId      string `yaml:"hockey_app_id"`
+	AppFolder        string `yaml:"app_folder"`
+	BuildsPath       string `yaml:"builds_path"`
+	SlackChannelName string `yaml:"slack_channel_name"`
 }
 
 type UploadResult struct {
+	Title        string `json:"title"`
 	Verion       string `json:"version"`
 	ShortVersion string `json:"shortversion"`
+	ConfigUrl    string `json:"config_url"`
+	PublicUrl    string `json:"public_url"`
 }
 
 func (c *Config) getConf() *Config {
@@ -62,11 +67,52 @@ func uploadToHockeyApp(c Config) UploadResult {
 	return uploadResult
 }
 
+func notifyBySlack(c Config, u UploadResult) {
+	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
+	color := "#36a64f"
+
+	author := "Build passed"
+	authorUrl := u.PublicUrl
+
+	project := u.Title
+	projectUrl := u.ConfigUrl
+	fallback := project + ": new build"
+	attach := slack.Attachment{
+		Fallback:   &fallback,
+		Color:      &color,
+		AuthorName: &author,
+		AuthorLink: &authorUrl,
+		Title:      &project,
+		TitleLink:  &projectUrl,
+	}
+	attach.
+		AddField(slack.Field{
+			Title: "Version name",
+			Value: u.ShortVersion,
+			Short: true,
+		}).
+		AddField(slack.Field{
+			Title: "Version code",
+			Value: u.Verion,
+			Short: true,
+		})
+
+	payload := slack.Payload{
+		Username:    "HockeyApp",
+		Channel:     c.SlackChannelName,
+		IconEmoji:   ":calling:",
+		Attachments: []slack.Attachment{attach},
+	}
+	err := slack.Send(webhookUrl, "", payload)
+	if len(err) > 0 {
+		panic(err)
+	}
+}
+
 func main() {
 	var c Config
 	c.getConf()
 
-	//slackToken := os.Getenv("SLACK_TOKEN")
 	result := uploadToHockeyApp(c)
-	fmt.Println(result)
+	notifyBySlack(c, result)
 }
