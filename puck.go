@@ -45,11 +45,11 @@ func (c *Config) getConf(configPath *string) *Config {
 	return c
 }
 
-func uploadToHockeyApp(c Config, buildType *string) UploadResult {
-
+func uploadToHockeyApp(c Config) UploadResult {
+	buildType := c.BuildType
 	hockeyToken := os.Getenv("HOCKEY_APP_TOKEN")
 	uploadUrl := "https://rink.hockeyapp.net/api/2/apps/" + c.HockeyAppId + "/app_versions/upload"
-	apkPath := c.AppFolder + "/" + c.BuildsPath + *buildType + "/" + c.AppFolder + "-" + *buildType + ".apk"
+	apkPath := c.AppFolder + "/" + c.BuildsPath + buildType + "/" + c.AppFolder + "-" + buildType + ".apk"
 
 	var uploadResult UploadResult
 	_, err := sling.New().Set("X-HockeyAppToken", hockeyToken).Post(uploadUrl).BodyProvider(
@@ -78,13 +78,13 @@ func notifyBySlack(c Config, u UploadResult) {
 	author := "Build passed"
 	authorUrl := u.PublicUrl
 
-	project := u.Title
+	project := u.Title + " [" + c.BuildType + "]"
 	projectUrl := u.ConfigUrl
 	fallback := project + ": new build"
-	hockeyInstall := "Install HockeyApp: https://rink.hockeyapp.net/apps/0873e2b98ad046a92c170a243a8515f6"
+	//hockeyInstall := "Install HockeyApp: https://rink.hockeyapp.net/apps/0873e2b98ad046a92c170a243a8515f6"
 
 	attach := slack.Attachment{
-		PreText:    &hockeyInstall,
+		//PreText:    &hockeyInstall,
 		Fallback:   &fallback,
 		Color:      &color,
 		AuthorName: &author,
@@ -126,7 +126,7 @@ func main() {
 
 	buildType := flag.String("type", c.BuildType, "build type (debug/release/etc)")
 	flag.Parse()
-
-	result := uploadToHockeyApp(c, buildType)
+	c.BuildType = *buildType
+	result := uploadToHockeyApp(c)
 	notifyBySlack(c, result)
 }
