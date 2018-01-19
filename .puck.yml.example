@@ -1,4 +1,5 @@
 hockey_app_id: 123
 slack_channel_name: eva
-app_folder: "app"
-builds_path: "build/outputs/apk/"
+app_folder: app
+builds_path: build/outputs/apk/
+build_type: release

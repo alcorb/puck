@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,6 +18,7 @@ type Config struct {
 	AppFolder        string `yaml:"app_folder"`
 	BuildsPath       string `yaml:"builds_path"`
 	SlackChannelName string `yaml:"slack_channel_name"`
+	BuildType        string `yaml:"build_type"`
 }
 
 type UploadResult struct {
@@ -27,25 +29,27 @@ type UploadResult struct {
 	PublicUrl    string `json:"public_url"`
 }
 
-func (c *Config) getConf() *Config {
+func (c *Config) getConf(configPath *string) *Config {
 
-	yamlFile, err := ioutil.ReadFile(".puck.yml")
+	yamlFile, err := ioutil.ReadFile(*configPath)
 	if err != nil {
-		log.Printf(".puck.yml not found: #%v ", err)
+		log.Printf(*configPath+" not found: #%v ", err)
+		panic(err)
 	}
 	err = yaml.Unmarshal(yamlFile, c)
 	if err != nil {
-		log.Printf("Invalid .puck.yml: #%v ", err)
+		log.Printf("Invalid "+(*configPath)+": #%v ", err)
+		panic(err)
 	}
 
 	return c
 }
 
-func uploadToHockeyApp(c Config) UploadResult {
-	buildType := os.Args[1]
+func uploadToHockeyApp(c Config, buildType *string) UploadResult {
+
 	hockeyToken := os.Getenv("HOCKEY_APP_TOKEN")
 	uploadUrl := "https://rink.hockeyapp.net/api/2/apps/" + c.HockeyAppId + "/app_versions/upload"
-	apkPath := c.AppFolder + "/" + c.BuildsPath + buildType + "/" + c.AppFolder + "-" + buildType + ".apk"
+	apkPath := c.AppFolder + "/" + c.BuildsPath + *buildType + "/" + c.AppFolder + "-" + *buildType + ".apk"
 
 	var uploadResult UploadResult
 	_, err := sling.New().Set("X-HockeyAppToken", hockeyToken).Post(uploadUrl).BodyProvider(
@@ -77,7 +81,10 @@ func notifyBySlack(c Config, u UploadResult) {
 	project := u.Title
 	projectUrl := u.ConfigUrl
 	fallback := project + ": new build"
+	hockeyInstall := "Install HockeyApp: https://rink.hockeyapp.net/apps/0873e2b98ad046a92c170a243a8515f6"
+
 	attach := slack.Attachment{
+		PreText:    &hockeyInstall,
 		Fallback:   &fallback,
 		Color:      &color,
 		AuthorName: &author,
@@ -110,9 +117,16 @@ func notifyBySlack(c Config, u UploadResult) {
 }
 
 func main() {
-	var c Config
-	c.getConf()
 
-	result := uploadToHockeyApp(c)
+	configPath := flag.String("config", ".puck.yml", "path to config file")
+	flag.Parse()
+
+	var c Config
+	c.getConf(configPath)
+
+	buildType := flag.String("type", c.BuildType, "build type (debug/release/etc)")
+	flag.Parse()
+
+	result := uploadToHockeyApp(c, buildType)
 	notifyBySlack(c, result)
 }
