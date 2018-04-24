@@ -50,6 +50,7 @@ func uploadToHockeyApp(c Config) UploadResult {
 	hockeyToken := os.Getenv("HOCKEY_APP_TOKEN")
 	uploadUrl := "https://rink.hockeyapp.net/api/2/apps/" + c.HockeyAppId + "/app_versions/upload"
 	apkPath := c.AppFolder + "/" + c.BuildsPath + buildType + "/" + c.AppFolder + "-" + buildType + ".apk"
+	descriptionPath := c.descriptionPath
 
 	var uploadResult UploadResult
 	_, err := sling.New().Set("X-HockeyAppToken", hockeyToken).Post(uploadUrl).BodyProvider(
@@ -62,6 +63,15 @@ func uploadToHockeyApp(c Config) UploadResult {
 			upload.Part{
 				Name: "status", Content: upload.String("2"),
 			},
+			upload.Part{
+				Name:		"notes",
+				FileName:	"description.txt",
+				Content: upload.File(descriptionPath),
+			},
+			upload.Part{
+				Name:		"notes_type"
+				Content		upload.String("1")
+			}
 		),
 	).ReceiveSuccess(&uploadResult)
 
