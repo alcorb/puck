@@ -69,7 +69,7 @@ func uploadToHockeyApp(c Config) UploadResult {
 				Content: upload.File(descriptionPath),
 			},
 			upload.Part{
-				Name:		"notes_type"
+				Name:		"notes_type",
 				Content		upload.String("1")
 			}
 		),
