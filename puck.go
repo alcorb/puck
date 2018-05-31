@@ -71,7 +71,7 @@ func uploadToHockeyApp(c Config) UploadResult {
 			upload.Part{
 				Name:		"notes_type",
 				Content:	upload.String("1"),
-			}
+			},
 		),
 	).ReceiveSuccess(&uploadResult)
 
