@@ -59,10 +59,10 @@ func uploadToHockeyApp(c Config) UploadResult {
 	}					
 
 	var uploadResult UploadResult
-	_, err := sling.New()
-					.Set("X-HockeyAppToken", hockeyToken)
-					.Post(uploadUrl)
-					.BodyProvider(
+	_, err := sling.New().
+					Set("X-HockeyAppToken", hockeyToken).
+					Post(uploadUrl).
+					BodyProvider(
 						upload.New(
 							upload.Part{
 								Name:     "ipa",
@@ -78,8 +78,8 @@ func uploadToHockeyApp(c Config) UploadResult {
 							Content:	upload.String("1"),
 						},
 						),
-					)
-					.ReceiveSuccess(&uploadResult)
+					).
+					ReceiveSuccess(&uploadResult)
 
 	if err != nil {
 		panic(err)
