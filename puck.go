@@ -17,6 +17,7 @@ type Config struct {
 	HockeyAppId      string `yaml:"hockey_app_id"`
 	SlackChannelName string `yaml:"slack_channel_name"`
 	ApkPath			 string `yaml:"apk_path"`
+	BuildType      	 string `yaml:"build_type"`
 	DescriptionPath  string `yaml:"description_path"`
 }
 
@@ -49,8 +50,8 @@ func uploadToHockeyApp(c Config) UploadResult {
 	apkPath := c.ApkPath
 	descriptionPath := c.DescriptionPath
 
-	descriptionPart := nil
-	if descriptionPath != nil && descriptionPath != "" {
+	var descriptionPart upload.Part
+	if descriptionPath != "" {
 		descriptionPart := upload.Part{
 			Name:		"notes",
 			FileName:	"description.txt",
