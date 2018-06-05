@@ -50,36 +50,52 @@ func uploadToHockeyApp(c Config) UploadResult {
 	apkPath := c.ApkPath
 	descriptionPath := c.DescriptionPath
 
-	var descriptionPart upload.Part
+	var upl upload
+
 	if descriptionPath != "" {
-		descriptionPart := upload.Part{
-			Name:		"notes",
-			FileName:	"description.txt",
-			Content: upload.File(descriptionPath),
-		}
-	}					
+		upl = upload.New(
+				upload.Part{
+					Name:     "ipa",
+					FileName: "app.apk",
+					Content:  upload.File(apkPath),
+				},
+				upload.Part{
+					Name: "status", 
+					Content: upload.String("2"),
+				},
+				upload.Part{
+					Name:		"notes",
+					FileName:	"description.txt",
+					Content: upload.File(descriptionPath),
+				},
+				upload.Part{
+					Name:		"notes_type",
+					Content:	upload.String("1"),
+				},
+			)
+	} else {
+		upl = upload.New(
+			upload.Part{
+				Name:     "ipa",
+				FileName: "app.apk",
+				Content:  upload.File(apkPath),
+			},
+			upload.Part{
+				Name: "status", 
+				Content: upload.String("2"),
+			},
+			upload.Part{
+				Name:		"notes_type",
+				Content:	upload.String("1"),
+			},
+		)
+	}				
 
 	var uploadResult UploadResult
 	_, err := sling.New().
 					Set("X-HockeyAppToken", hockeyToken).
 					Post(uploadUrl).
-					BodyProvider(
-						upload.New(
-							upload.Part{
-								Name:     "ipa",
-								FileName: "app.apk",
-								Content:  upload.File(apkPath),
-							},
-						upload.Part{
-							Name: "status", Content: upload.String("2"),
-						},
-						descriptionPart,
-						upload.Part{
-							Name:		"notes_type",
-							Content:	upload.String("1"),
-						},
-						),
-					).
+					BodyProvider(upl).
 					ReceiveSuccess(&uploadResult)
 
 	if err != nil {
