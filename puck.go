@@ -15,10 +15,8 @@ import (
 
 type Config struct {
 	HockeyAppId      string `yaml:"hockey_app_id"`
-	AppFolder        string `yaml:"app_folder"`
-	BuildsPath       string `yaml:"builds_path"`
 	SlackChannelName string `yaml:"slack_channel_name"`
-	BuildType        string `yaml:"build_type"`
+	ApkPath			 string `yaml:"apk_path"`
 	DescriptionPath  string `yaml:"description_path"`
 }
 
@@ -46,35 +44,42 @@ func (c *Config) getConf(configPath *string) *Config {
 	return c
 }
 func uploadToHockeyApp(c Config) UploadResult {
-
-	buildType := c.BuildType
 	hockeyToken := os.Getenv("HOCKEY_APP_TOKEN")
 	uploadUrl := "https://rink.hockeyapp.net/api/2/apps/" + c.HockeyAppId + "/app_versions/upload"
-	apkPath := c.AppFolder + "/" + c.BuildsPath + buildType + "/" + c.AppFolder + "-" + buildType + ".apk"
+	apkPath := c.ApkPath
 	descriptionPath := c.DescriptionPath
 
+	descriptionPart := nil
+	if descriptionPath != nil && descriptionPath != "" {
+		descriptionPart := upload.Part{
+			Name:		"notes",
+			FileName:	"description.txt",
+			Content: upload.File(descriptionPath),
+		}
+	}					
+
 	var uploadResult UploadResult
-	_, err := sling.New().Set("X-HockeyAppToken", hockeyToken).Post(uploadUrl).BodyProvider(
-		upload.New(
-			upload.Part{
-				Name:     "ipa",
-				FileName: "app.apk",
-				Content:  upload.File(apkPath),
-			},
-			upload.Part{
-				Name: "status", Content: upload.String("2"),
-			},
-			upload.Part{
-				Name:		"notes",
-				FileName:	"description.txt",
-				Content: upload.File(descriptionPath),
-			},
-			upload.Part{
-				Name:		"notes_type",
-				Content:	upload.String("1"),
-			},
-		),
-	).ReceiveSuccess(&uploadResult)
+	_, err := sling.New()
+					.Set("X-HockeyAppToken", hockeyToken)
+					.Post(uploadUrl)
+					.BodyProvider(
+						upload.New(
+							upload.Part{
+								Name:     "ipa",
+								FileName: "app.apk",
+								Content:  upload.File(apkPath),
+							},
+						upload.Part{
+							Name: "status", Content: upload.String("2"),
+						},
+						descriptionPart,
+						upload.Part{
+							Name:		"notes_type",
+							Content:	upload.String("1"),
+						},
+						),
+					)
+					.ReceiveSuccess(&uploadResult)
 
 	if err != nil {
 		panic(err)
@@ -128,16 +133,12 @@ func notifyBySlack(c Config, u UploadResult) {
 }
 
 func main() {
-
 	configPath := flag.String("config", ".puck.yml", "path to config file")
 	flag.Parse()
 
 	var c Config
 	c.getConf(configPath)
 
-	buildType := flag.String("type", c.BuildType, "build type (debug/release/etc)")
-	flag.Parse()
-	c.BuildType = *buildType
 	result := uploadToHockeyApp(c)
 	notifyBySlack(c, result)
 }
