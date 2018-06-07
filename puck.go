@@ -52,10 +52,15 @@ func uploadToHockeyApp(c Config) UploadResult {
 
 	var descriptionPart upload.Part
 	if descriptionPath != "" {
+		descriptionFile, err := ioutil.ReadFile(descriptionPath)
+		if err != nil {
+			log.Printf(descriptionPath + " not found: #%v ", err)
+			panic(err)
+		}
+
 		descriptionPart = upload.Part{
 			Name:		"notes",
-			FileName:	"description.txt",
-			Content: upload.File(descriptionPath),
+			Content: 	upload.String(string(descriptionFile)),
 		}
 	}					
 
@@ -70,14 +75,15 @@ func uploadToHockeyApp(c Config) UploadResult {
 								FileName: "app.apk",
 								Content:  upload.File(apkPath),
 							},
-						upload.Part{
-							Name: "status", Content: upload.String("2"),
-						},
-						descriptionPart,
-						upload.Part{
-							Name:		"notes_type",
-							Content:	upload.String("1"),
-						},
+							upload.Part{
+								Name: "status", 
+								Content: upload.String("2"),
+							},
+							descriptionPart,
+							upload.Part{
+								Name:		"notes_type",
+								Content:	upload.String("1"),
+							},
 						),
 					).
 					ReceiveSuccess(&uploadResult)
