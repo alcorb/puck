@@ -1,5 +1,5 @@
 hockey_app_id: 123
 slack_channel_name: eva
-app_folder: app
-builds_path: build/outputs/apk/
-build_type: release
+apk_path: "app/build/outputs/apk/prod/debug/app-prod-debug.apk"
+build_type: prod-debug
+description_path: "changelogs/changelog_90_6.05.txt"
